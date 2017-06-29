@@ -7,24 +7,19 @@ import java.util.List;
 public class Node {
 
     private List<Integer> piles;
-    private long depth;
     private int heuristicValue;
 
-    private Node parent;
     private List<Node> childList;
 
     public Node(Integer... piles) {
         this.piles = new ArrayList<>(Arrays.asList(piles));
         this.childList = new ArrayList<>();
-        this.depth = 0;
     }
 
     public Node(Node parent, List<Integer> piles) {
-        this.parent = parent;
         parent.childList.add(this);
         this.piles = new ArrayList<>(piles);
         this.childList = new ArrayList<>();
-        this.depth = parent.depth + 1;
     }
 
     public List<Integer> getPiles() {
@@ -33,22 +28,6 @@ public class Node {
 
     public List<Node> getChildList() {
         return childList;
-    }
-
-    public Node getParent() {
-        return parent;
-    }
-
-    public long getDepth() {
-        return depth;
-    }
-
-    public long gePilesNum() {
-        return piles.size();
-    }
-
-    public long getNotEmptyPilesNum() {
-        return piles.stream().filter(i -> i > 0).count();
     }
 
     public int getHeuristicValue() {

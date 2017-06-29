@@ -3,19 +3,24 @@ package com.rebel.nim;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Nim {
 
-    private static Set<Node>      generated = new HashSet<>();
-    private static BufferedReader reader    = new BufferedReader(new InputStreamReader(System.in));
+    private static BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+
+    private Node state;
+
+    public Nim(Node state) {
+        this.state = state;
+    }
 
     public static void main(String[] args) {
-        System.out.println(readNum("Enter num:"));
-        Node node = new Node(8, 13, 7, 5, 9);
-//        generateTree(node);
-        minimax(node, 2, true);
+//        Node node = new Node(readPiles());
+        Node node = new Node(5, 8, 13, 7, 5, 9);
+        Nim nim = new Nim(node);
 
-        node.getChildList().forEach(n -> System.out.println(n + " value " + n.getHeuristicValue()));
+        nim.startGame();
     }
 
     private static List<Node> generateChildNodes(Node node) {
@@ -37,38 +42,31 @@ public class Nim {
         return nodes;
     }
 
-    private static void generateTree(Node root) {
-        LinkedList<Node> queue = new LinkedList<>();
-        queue.add(root);
-
-        while (!queue.isEmpty()) {
-            Node node = queue.pollFirst();
-            if (generated.contains(node))
-                continue;
-            generated.add(node);
-            queue.addAll(generateChildNodes(node));
-        }
-    }
-
     private static int minimax(Node node, int depth, boolean maximizingPlayer) {
         if (depth == 0 || node.isEmpty()) {
-            return heuristicEvaluation(node);
+            return (maximizingPlayer ? 1 : -1) * heuristicEvaluation(node);
         }
 
         if (maximizingPlayer) {
             int bestValue = Integer.MIN_VALUE;
             for (Node child : generateChildNodes(node)) {
-                int v = minimax(child, depth - 1, false);
-                bestValue = Math.max(bestValue, v);
-                child.setHeuristicValue(bestValue);
+                int value = minimax(child, depth - 1, false);
+                if (value > bestValue) {
+                    bestValue = value;
+                }
+                child.setHeuristicValue(value);
+                node.setHeuristicValue(bestValue);
             }
             return bestValue;
         } else {
             int bestValue = Integer.MAX_VALUE;
             for (Node child : generateChildNodes(node)) {
-                int v = minimax(child, depth - 1, true);
-                bestValue = Math.min(bestValue, v);
-                child.setHeuristicValue(bestValue);
+                int value = minimax(child, depth - 1, true);
+                if (value < bestValue) {
+                    bestValue = value;
+                }
+                node.setHeuristicValue(bestValue);
+                child.setHeuristicValue(value);
             }
             return bestValue;
         }
@@ -86,12 +84,85 @@ public class Nim {
         return xor;
     }
 
-    private static int readNum(String text) {
+    private static List<Integer> readPiles() {
+        boolean finished = false;
+        List<Integer> result = new ArrayList<>();
+        while (!finished) {
+            try {
+                System.out.println("Enter piles:");
+                String[] pilesText = reader.readLine().split(", ");
+                result.addAll(Arrays.stream(pilesText).map(Integer::parseInt).collect(Collectors.toList()));
+                finished = true;
+            } catch (Exception e) {
+                System.out.println("Wrong input");
+            }
+        }
+        return result;
+    }
+
+    public void startGame() {
+        boolean userMove = true;
+
+        while (true) {
+            if (userMove) {
+                userMove();
+            } else {
+                comupterMove();
+            }
+            if (state.isEmpty()) {
+                System.out.println((userMove ? "User" : "Computer") + " wins");
+                return;
+            }
+            System.out.println();
+            userMove = !userMove;
+        }
+    }
+
+    private void userMove() {
+        System.out.println("----User move----");
+        System.out.println("Current state: " + state);
+        state = move();
+        System.out.println("After move: " + state);
+    }
+
+    private void comupterMove() {
+        System.out.println("----Computer move----");
+        System.out.println("Current state: " + state);
+        int minimax = minimax(state, 2, true);
+//        System.out.println("Possible steps:");
+//        state.getChildList().forEach(n -> System.out.print(n + " value " + n.getHeuristicValue() + "  "));
+//        System.out.println();
+        Optional<Node> perfectMove = state.getChildList().stream().filter(n -> n.getHeuristicValue() == minimax).findAny();
+        state = perfectMove.orElse(state.getChildList().get(0));
+        System.out.println("After move: " + state);
+    }
+
+    private Node move() {
+        while (true) {
+            int pile = readNum("Choose pile:") - 1;
+            List<Integer> piles = state.getPiles();
+            if (pile <= 0 || piles.size() < pile) {
+                System.out.println("Wrong pile number");
+                continue;
+            }
+
+            int amount = readNum("Amount pile:");
+            if (amount <= 0 || piles.get(pile) == 0 || piles.get(pile) < amount) {
+                System.out.println("Wrong amount");
+                continue;
+            }
+
+            piles.set(pile, piles.get(pile) - amount);
+            return new Node(state, piles);
+        }
+    }
+
+    private int readNum(String text) {
         boolean finished = false;
         int result = 0;
         while (!finished) {
             try {
-                System.out.print(text + " ");
+                System.out.println(text);
                 result = Integer.parseInt(reader.readLine());
                 finished = true;
             } catch (Exception e) {
